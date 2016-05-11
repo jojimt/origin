@@ -41,6 +41,15 @@ AWS_CRED_FILE       = "~/.awscred"
 AWS_BOX_URL         = "https://github.com/mitchellh/vagrant-aws/raw/master/dummy.box"
 VM_NAME_PREFIX      = ENV['OPENSHIFT_VM_NAME_PREFIX'] || ""
 
+# Copy the proxy settings to the VM
+provision_proxy = <<SCRIPT
+echo "export http_proxy='$1'" > /etc/profile.d/envvar.sh
+echo "export https_proxy='$2'" >> /etc/profile.d/envvar.sh
+echo "export http_proxy='$1'" >> ~/.profile
+echo "export https_proxy='$2'" >> ~/.profile
+source /etc/profile.d/envvar.sh
+SCRIPT
+
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   # these are the default settings, overrides are in .vagrant-openshift.json
@@ -120,6 +129,10 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     config.vm.define "#{VM_NAME_PREFIX}dind-host" do |config|
       config.vm.box = kube_box[kube_os]["name"]
       config.vm.box_url = kube_box[kube_os]["box_url"]
+      config.vm.provision "shell" do |s|
+          s.inline = provision_proxy
+          s.args = [ENV["http_proxy"] || "", ENV["https_proxy"] || ""]
+      end
       config.vm.provision "shell", inline: "#{sync_to}/contrib/vagrant/provision-dind.sh"
       config.vm.provision "shell", inline: "#{sync_to}/hack/dind-cluster.sh config-host"
       config.vm.provision "shell", privileged: false, inline: "#{sync_to}/hack/dind-cluster.sh restart"
@@ -165,6 +178,10 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     config.vm.define "#{VM_NAME_PREFIX}master" do |config|
       config.vm.box = kube_box[kube_os]["name"]
       config.vm.box_url = kube_box[kube_os]["box_url"]
+      config.vm.provision "shell" do |s|
+          s.inline = provision_proxy
+          s.args = [ENV["http_proxy"] || "", ENV["https_proxy"] || ""]
+      end
       config.vm.provision "shell", inline: "/bin/bash -x #{sync_to}/contrib/vagrant/provision-master.sh #{master_ip} #{num_minion} #{minion_ips_str} #{instance_prefix} #{network_plugin} #{fixup_net_udev} #{skip_build}"
       config.vm.network "private_network", ip: "#{master_ip}"
       config.vm.hostname = "openshift-master"
@@ -179,6 +196,10 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
         minion_ip = minion_ips[n]
         minion.vm.box = kube_box[kube_os]["name"]
         minion.vm.box_url = kube_box[kube_os]["box_url"]
+        config.vm.provision "shell" do |s|
+            s.inline = provision_proxy
+            s.args = [ENV["http_proxy"] || "", ENV["https_proxy"] || ""]
+        end
         minion.vm.provision "shell", inline: "/bin/bash -x #{sync_to}/contrib/vagrant/provision-node.sh #{master_ip} #{num_minion} #{minion_ips_str} #{instance_prefix} -i #{minion_index} #{network_plugin} #{fixup_net_udev} #{skip_build}"
         minion.vm.network "private_network", ip: "#{minion_ip}"
         minion.vm.hostname = "openshift-minion-#{minion_index}"
