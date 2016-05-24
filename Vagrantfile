@@ -45,13 +45,16 @@ VM_NAME_PREFIX      = ENV['OPENSHIFT_VM_NAME_PREFIX'] || ""
 provision_proxy = <<SCRIPT
 echo "export http_proxy='$1'" > /etc/profile.d/envvar.sh
 echo "export https_proxy='$2'" >> /etc/profile.d/envvar.sh
+echo "export no_proxy='$3'" >> /etc/profile.d/envvar.sh
 echo "export http_proxy='$1'" >> ~/.profile
 echo "export https_proxy='$2'" >> ~/.profile
+echo "export no_proxy='$3'" >> ~/.profile
 source /etc/profile.d/envvar.sh
 SCRIPT
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
+  nodes = Array.new()
   # these are the default settings, overrides are in .vagrant-openshift.json
   vagrant_openshift_config = {
     "instance_name"     => "origin-dev",
@@ -131,7 +134,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
       config.vm.box_url = kube_box[kube_os]["box_url"]
       config.vm.provision "shell" do |s|
           s.inline = provision_proxy
-          s.args = [ENV["http_proxy"] || "", ENV["https_proxy"] || ""]
+          s.args = [ENV["http_proxy"] || "", ENV["https_proxy"] || "", "localhost,127.0.0.1.netmaster"]
       end
       config.vm.provision "shell", inline: "#{sync_to}/contrib/vagrant/provision-dind.sh"
       config.vm.provision "shell", inline: "#{sync_to}/hack/dind-cluster.sh config-host"
@@ -180,7 +183,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
       config.vm.box_url = kube_box[kube_os]["box_url"]
       config.vm.provision "shell" do |s|
           s.inline = provision_proxy
-          s.args = [ENV["http_proxy"] || "", ENV["https_proxy"] || ""]
+          s.args = [ENV["http_proxy"] || "", ENV["https_proxy"] || "", "#{minion_ips_str},localhost,netmaster,127.0.0.1"]
       end
       config.vm.provision "shell", inline: "/bin/bash -x #{sync_to}/contrib/vagrant/provision-master.sh #{master_ip} #{num_minion} #{minion_ips_str} #{instance_prefix} #{network_plugin} #{fixup_net_udev} #{skip_build}"
       config.vm.network "private_network", ip: "#{master_ip}"
@@ -198,7 +201,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
         minion.vm.box_url = kube_box[kube_os]["box_url"]
         config.vm.provision "shell" do |s|
             s.inline = provision_proxy
-            s.args = [ENV["http_proxy"] || "", ENV["https_proxy"] || ""]
+            s.args = [ENV["http_proxy"] || "", ENV["https_proxy"] || "", "#{minion_ips_str},localhost,netmaster,127.0.0.1"]
         end
         minion.vm.provision "shell", inline: "/bin/bash -x #{sync_to}/contrib/vagrant/provision-node.sh #{master_ip} #{num_minion} #{minion_ips_str} #{instance_prefix} -i #{minion_index} #{network_plugin} #{fixup_net_udev} #{skip_build}"
         minion.vm.network "private_network", ip: "#{minion_ip}"
@@ -384,4 +387,29 @@ runcmd:
       end
     end if vagrant_openshift_config['aws']
 
+# Create ansible inventory for contiv
+  if vagrant_openshift_config['network_plugin'] == 'cni'
+    num_minion.times do |i| 
+      name = "minion-#{i+1}"
+      nodes.push(name)
+    end
+    master_ip = vagrant_openshift_config['master_ip']
+    minion_ip_base = vagrant_openshift_config['minion_ip_base']
+    minion_ips = num_minion.times.collect { |n| minion_ip_base + "#{n+3}" }
+    config.vm.define "minion-#{num_minion}" do |c|
+      c.vm.provision :ansible do |ansible|
+        ansible.playbook = "stub.yml"
+#        ansible.host_vars = {
+#          "#{VM_NAME_PREFIX}master" => {"contiv_control_ip" => master_ip }
+#        }
+
+        ansible.groups = {
+          "nodes" => nodes,
+          "masters" => ["#{VM_NAME_PREFIX}master"],
+          "etcd_servers" => ["#{VM_NAME_PREFIX}master"],
+          "etcd" => ["#{VM_NAME_PREFIX}master"],
+        }
+      end
+    end
+  end
 end
