@@ -183,7 +183,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
       config.vm.box_url = kube_box[kube_os]["box_url"]
       config.vm.provision "shell" do |s|
           s.inline = provision_proxy
-          s.args = [ENV["http_proxy"] || "", ENV["https_proxy"] || "", "#{minion_ips_str},localhost,netmaster,127.0.0.1"]
+          s.args = [ENV["http_proxy"] || "", ENV["https_proxy"] || "", "#{master_ip},#{minion_ips_str},localhost,netmaster,127.0.0.1"]
       end
       config.vm.provision "shell", inline: "/bin/bash -x #{sync_to}/contrib/vagrant/provision-master.sh #{master_ip} #{num_minion} #{minion_ips_str} #{instance_prefix} #{network_plugin} #{fixup_net_udev} #{skip_build}"
       config.vm.network "private_network", ip: "#{master_ip}"
@@ -201,7 +201,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
         minion.vm.box_url = kube_box[kube_os]["box_url"]
         config.vm.provision "shell" do |s|
             s.inline = provision_proxy
-            s.args = [ENV["http_proxy"] || "", ENV["https_proxy"] || "", "#{minion_ips_str},localhost,netmaster,127.0.0.1"]
+            s.args = [ENV["http_proxy"] || "", ENV["https_proxy"] || "", "#{master_ip},#{minion_ips_str},localhost,netmaster,127.0.0.1"]
         end
         minion.vm.provision "shell", inline: "/bin/bash -x #{sync_to}/contrib/vagrant/provision-node.sh #{master_ip} #{num_minion} #{minion_ips_str} #{instance_prefix} -i #{minion_index} #{network_plugin} #{fixup_net_udev} #{skip_build}"
         minion.vm.network "private_network", ip: "#{minion_ip}"
