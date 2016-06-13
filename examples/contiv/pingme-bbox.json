@@ -1,0 +1,52 @@
+{
+  "kind": "Pod",
+  "apiVersion": "v1",
+  "metadata": {
+    "name": "pingme",
+    "creationTimestamp": null,
+    "labels": {
+      "name": "pingme",
+      "io.contiv.network": "user-net2",
+      "io.contiv.net-group": "pingme-epg"
+    }
+  },
+  "spec": {
+    "containers": [
+      {
+        "name": "pingme",
+        "image": "contiv/util-busybox",
+        "command": ["/bin/sh", "-c", "sleep 6000"],
+        "ports": [
+          {
+            "containerPort": 8080,
+            "protocol": "TCP"
+          }
+        ],
+        "resources": {},
+        "volumeMounts": [
+          {
+            "name":"tmp",
+            "mountPath":"/tmp"
+          }
+        ],
+        "terminationMessagePath": "/dev/termination-log",
+        "imagePullPolicy": "IfNotPresent",
+        "capabilities": {},
+        "securityContext": {
+          "capabilities": {},
+          "privileged": false
+        }
+      }
+    ],
+    "volumes": [
+      {
+        "name":"tmp",
+        "emptyDir": {}
+      }
+    ],
+    "restartPolicy": "Always",
+    "dnsPolicy": "ClusterFirst",
+    "serviceAccount": ""
+  },
+  "status": {}
+}

@@ -23,14 +23,15 @@ function GetContiv {
 }
 
 # contiv version
-: ${contivVer:=v0.1-05-02-2016.23-10-27.UTC}
+: ${contivVer:=v0.1-06-02-2016.19-39-04.UTC}
+#: ${contivVer:=v0.1-05-02-2016.23-10-27.UTC}
 
 top_dir=$PWD
 
-GetContiv
+#GetContiv
 
 invFile=.vagrant/provisioners/ansible/inventory/vagrant_ansible_inventory
 clusterFile=openshift-ansible/playbooks/common/openshift-cluster/contiv_nw.yml
 # run ansible
-ansible-playbook -i $top_dir/$invFile $top_dir/../$clusterFile -e "networking=contiv contiv_bin_path=$top_dir/contiv_bin etcd_peers_group=masters ansible_ssh_user=vagrant https_proxy=$https_proxy http_proxy=$http_proxy no_proxy=$no_proxy"
+ansible-playbook -i $top_dir/$invFile $top_dir/../$clusterFile -e "networking=contiv contiv_bin_path=$top_dir/contiv_bin etcd_peers_group=masters ansible_ssh_user=vagrant https_proxy=$https_proxy http_proxy=$http_proxy no_proxy=$no_proxy contiv_version=$contivVer"
 

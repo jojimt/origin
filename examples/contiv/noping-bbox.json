@@ -1,0 +1,52 @@
+{
+  "kind": "Pod",
+  "apiVersion": "v1",
+  "metadata": {
+    "name": "noping",
+    "creationTimestamp": null,
+    "labels": {
+      "name": "noping",
+      "io.contiv.network": "user-net2",
+      "io.contiv.net-group": "noping-epg"
+    }
+  },
+  "spec": {
+    "containers": [
+      {
+        "name": "noping",
+        "image": "contiv/util-busybox",
+        "command": ["/bin/sh", "-c", "sleep 6000"],
+        "ports": [
+          {
+            "containerPort": 8080,
+            "protocol": "TCP"
+          }
+        ],
+        "resources": {},
+        "volumeMounts": [
+          {
+            "name":"tmp",
+            "mountPath":"/tmp"
+          }
+        ],
+        "terminationMessagePath": "/dev/termination-log",
+        "imagePullPolicy": "IfNotPresent",
+        "capabilities": {},
+        "securityContext": {
+          "capabilities": {},
+          "privileged": false
+        }
+      }
+    ],
+    "volumes": [
+      {
+        "name":"tmp",
+        "emptyDir": {}
+      }
+    ],
+    "restartPolicy": "Always",
+    "dnsPolicy": "ClusterFirst",
+    "serviceAccount": ""
+  },
+  "status": {}
+}
